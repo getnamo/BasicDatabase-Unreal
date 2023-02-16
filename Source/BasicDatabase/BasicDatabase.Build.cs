@@ -38,7 +38,9 @@ public class BasicDatabase : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
-				"CoreUtility"
+				"CoreUtility",
+				"SIOJson",
+				"Json"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);

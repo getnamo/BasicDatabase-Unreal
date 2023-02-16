@@ -14,8 +14,8 @@ public:
 	//Main API
 
 	//Save/Load struct wrapper, BP fieldpaths require custom thunk wrapper
-	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path);
-	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path);
+	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
+	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
 
 	//Generate indices
 

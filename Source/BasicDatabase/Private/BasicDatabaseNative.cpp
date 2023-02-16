@@ -3,6 +3,7 @@
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
 #include "CUFileSubsystem.h"
+#include "SIOJConvert.h"
 
 FBasicDatabaseNative::FBasicDatabaseNative()
 {
@@ -15,20 +16,16 @@ FBasicDatabaseNative::~FBasicDatabaseNative()
 }
 
 
-bool FBasicDatabaseNative::SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path)
+bool FBasicDatabaseNative::SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct)
 {
-	//convert to json string
-
-	//store json string file
-	return false;
+	//SIOJConvert already has a utility that does the base functionality we need, wrap it directly in our api
+	return USIOJConvert::ToJsonFile(Path, Struct, StructPtr, bIsBlueprintStruct);
 }
 
-bool FBasicDatabaseNative::LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path)
+bool FBasicDatabaseNative::LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct)
 {
-	//read to string
-	
-	//convert to  struct
-	return false;
+	//SIOJConvert already has a utility that does the base functionality we need, wrap it directly in our api
+	return USIOJConvert::JsonFileToUStruct(Path, Struct, StructPtr, bIsBlueprintStruct);
 }
 
 bool FBasicDatabaseNative::SaveBytesToPath(const TArray<uint8>& Bytes, const FString& Path, bool bLogSave /*= false*/)
