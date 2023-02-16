@@ -38,6 +38,7 @@ public class BasicDatabase : ModuleRules
 				"Engine",
 				"Slate",
 				"SlateCore",
+				"CoreUtility"
 				// ... add private dependencies that you statically link with here ...	
 			}
 			);
