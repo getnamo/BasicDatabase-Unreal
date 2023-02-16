@@ -11,9 +11,25 @@ FBasicDatabaseNative::FBasicDatabaseNative()
 
 FBasicDatabaseNative::~FBasicDatabaseNative()
 {
-
+	FileSystem = nullptr;
 }
 
+
+bool FBasicDatabaseNative::SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path)
+{
+	//convert to json string
+
+	//store json string file
+	return false;
+}
+
+bool FBasicDatabaseNative::LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path)
+{
+	//read to string
+	
+	//convert to  struct
+	return false;
+}
 
 bool FBasicDatabaseNative::SaveBytesToPath(const TArray<uint8>& Bytes, const FString& Path, bool bLogSave /*= false*/)
 {
