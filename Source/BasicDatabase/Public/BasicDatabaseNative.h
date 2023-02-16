@@ -11,9 +11,9 @@ public:
 	FBasicDatabaseNative();
 	~FBasicDatabaseNative();
 
-	//Save/Load
-	bool SaveBytesToFile(const TArray<uint8>& Bytes, const FString& Directory, const FString& FileName, bool bLogSave);
-	bool ReadBytesFromFile(const FString& Directory, const FString& FileName, TArray<uint8>& OutBytes);
+	//Save/Load - local overrides for convenience
+	bool SaveBytesToPath(const TArray<uint8>& Bytes, const FString& Path, bool bLogSave = false);
+	bool ReadBytesFromPath(const FString& Path, TArray<uint8>& OutBytes);
 
 protected:
 	//Will get initialized before constructor

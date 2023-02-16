@@ -15,12 +15,12 @@ FBasicDatabaseNative::~FBasicDatabaseNative()
 }
 
 
-bool FBasicDatabaseNative::SaveBytesToFile(const TArray<uint8>& Bytes, const FString& Directory, const FString& FileName, bool bLogSave)
+bool FBasicDatabaseNative::SaveBytesToPath(const TArray<uint8>& Bytes, const FString& Path, bool bLogSave /*= false*/)
 {
-	return FileSystem->SaveBytesToFile(Bytes, Directory, FileName, bLogSave);
+	return FileSystem->SaveBytesToPath(Bytes, Path, bLogSave);
 }
 
-bool FBasicDatabaseNative::ReadBytesFromFile(const FString& Directory, const FString& FileName, TArray<uint8>& OutBytes)
+bool FBasicDatabaseNative::ReadBytesFromPath(const FString& Path, TArray<uint8>& OutBytes)
 {
-	return FileSystem->ReadBytesFromFile(Directory, FileName, OutBytes);
+	return FileSystem->ReadBytesFromPath(Path, OutBytes);
 }
