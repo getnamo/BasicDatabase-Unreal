@@ -1,3 +1,4 @@
+#include "BasicDatabaseSubsystem.h"
 
 void UBasicDataBaseSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {

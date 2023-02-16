@@ -4,7 +4,7 @@
 #include "BasicDatabaseNative.h"
 #include "BasicDatabaseSubsystem.generated.h"
 
-UCLASS(ClassGroup = "WRCoreAI")
+UCLASS(ClassGroup = "BasicDatabase")
 class BASICDATABASE_API UBasicDataBaseSubsystem : public UGameInstanceSubsystem
 {
 	GENERATED_BODY()
