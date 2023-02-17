@@ -8,8 +8,13 @@ class UCUFileSubsystem;
 class FBasicDatabaseNative
 {
 public:
-	FBasicDatabaseNative();
+	//RC domain is reverse comlike e.g. entity.npc
+	FBasicDatabaseNative(const FString& InRCDomain = TEXT("default"));
 	~FBasicDatabaseNative();
+
+	//Root path for all databases
+	FString RootPath;
+
 
 	//Main API
 
@@ -27,7 +32,19 @@ public:
 	bool SaveBytesToPath(const TArray<uint8>& Bytes, const FString& Path, bool bLogSave = false);
 	bool ReadBytesFromPath(const FString& Path, TArray<uint8>& OutBytes);
 
+
+	//Utility
+	//Obtain a file domain from a reverse comlike domain e.g. entity.npc -> Entity-Npc
+	FString FileDomainFromRC(const FString& InDomain);
+	void CapitalizeLetterAtIndex(FString& StringToModify, int32 Index);
+
 protected:
+	//The file domain that this db uses e.g. Default or Entity-Npc, converrted from reverse comlike
+	FString FileDomain;
+
 	//Will get initialized before constructor
 	UCUFileSubsystem* FileSystem;
+
+	//Utility
+	void RunRCTest(const FString& InRCDomain);
 };

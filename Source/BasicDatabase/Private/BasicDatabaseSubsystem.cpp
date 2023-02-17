@@ -7,6 +7,8 @@ void UBasicDataBaseSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	Collection.InitializeDependency(UCUFileSubsystem::StaticClass());
 
 	DBNative = MakeShareable(new FBasicDatabaseNative());
+
+	UE_LOG(LogTemp, Log, TEXT("UBasicDataBaseSubsystem initiliazed."));
 }
 
 void UBasicDataBaseSubsystem::Deinitialize()
