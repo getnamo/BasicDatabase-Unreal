@@ -10,10 +10,6 @@ FBasicDatabaseNative::FBasicDatabaseNative(const FString& InRCDomain)
 	FileSystem	= GEngine->GetEngineSubsystem<UCUFileSubsystem>();
 	FileDomain = FileDomainFromRC(InRCDomain);
 	RootPath = FileSystem->ProjectSavedDirectory();
-
-	RunRCTest(TEXT("group.default"));
-	RunRCTest(TEXT("some.thing.is.good"));
-	UE_LOG(LogTemp, Log, TEXT("++++Done++++"));
 }
 
 FBasicDatabaseNative::~FBasicDatabaseNative()
@@ -80,27 +76,6 @@ void FBasicDatabaseNative::CapitalizeLetterAtIndex(FString& StringToModify, int3
 	StringToModify[Index] = FChar::ToUpper(StringToModify[Index]);
 }
 
-FString TransformString(FString InputString)
-{
-	if (InputString.IsEmpty())
-	{
-		return FString("Default");
-	}
-
-	FString TransformedString = InputString.Replace(TEXT("."), TEXT("-"));
-	TransformedString[0] = FChar::ToUpper(TransformedString[0]);
-
-	for (int i = 1; i < TransformedString.Len(); i++)
-	{
-		if (TransformedString[i - 1] == '-')
-		{
-			TransformedString[i] = FChar::ToUpper(TransformedString[i]);
-		}
-	}
-
-	return TransformedString;
-}
-
 //Testing suite
 void FBasicDatabaseNative::RunRCTest(const FString& InRCDomain)
 {
@@ -110,10 +85,4 @@ void FBasicDatabaseNative::RunRCTest(const FString& InRCDomain)
 	FileDomain = FileDomainFromRC(InRCDomain);
 
 	UE_LOG(LogTemp, Log, TEXT("file domain %s"), *FileDomain);
-
-	FString GPTTestString = TransformString(InRCDomain);
-
-	UE_LOG(LogTemp, Log, TEXT("file domain2 %s"), *GPTTestString);
 }
-
-
