@@ -61,6 +61,38 @@ bool FBasicDatabaseNative::LoadStructFromPath(UStruct* Struct, void* StructPtr, 
 	return USIOJConvert::JsonFileToUStruct(Path, Struct, StructPtr, bIsBlueprintStruct);
 }
 
+//BEGIN TODO: implement
+FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructPtr)
+{
+	return TEXT("Invalid");
+}
+
+bool FBasicDatabaseNative::RemoveStructFromDatabase(const FString& Index)
+{
+	return false;
+}
+
+void FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr)
+{
+
+}
+
+bool FBasicDatabaseNative::AddSpatialIndex(const FString& Index, const FVector& Location)
+{
+	return false;
+}
+
+bool FBasicDatabaseNative::RemoveSpatialIndex(const FString& Index)
+{
+	return false;
+}
+
+bool FBasicDatabaseNative::FindInSpatialIndex(const FVector& AtSpatial, TArray<FString>& OutResults, float Radius /*= 1.f*/)
+{
+	return false;
+}
+//END TODO
+
 bool FBasicDatabaseNative::SaveBytesToPath(const TArray<uint8>& Bytes, const FString& Path, bool bLogSave /*= false*/)
 {
 	return FileSystem->SaveBytesToPath(Bytes, Path, bLogSave);

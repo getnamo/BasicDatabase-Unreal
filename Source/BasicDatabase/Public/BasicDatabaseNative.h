@@ -22,7 +22,19 @@ public:
 	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
 	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
 
-	//Generate indices
+	//Main Index
+	FString AddStructToDatabase(UStruct* Struct, void* StructPtr);
+	bool RemoveStructFromDatabase(const FString& Index);
+
+	void ReadStructAtIndex(UStruct* Struct, void* StructPtr);
+	
+
+	//Spatial index
+	bool AddSpatialIndex(const FString& Index, const FVector& Location);
+	bool RemoveSpatialIndex(const FString& Index);
+
+	//returns true if any results were found. OutResults is a list of main indices
+	bool FindInSpatialIndex(const FVector& AtSpatial, TArray<FString>& OutResults, float Radius = 1.f);
 
 	//Auto-populate files, update indices
 
