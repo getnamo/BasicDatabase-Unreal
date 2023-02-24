@@ -101,7 +101,7 @@ FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructP
 	//Simple path, will cause hitches
 	if (bInstantSave)
 	{
-		bSuccessfulQueue = SaveStructToPath(Struct, StructPtr, StructPathForIndex(KeyString), bIsBlueprintStruct);
+		bSuccessfulQueue = SaveStructToPath(Struct, StructPtr, StructPathForPrimaryKey(KeyString), bIsBlueprintStruct);
 	}
 	else
 	{
@@ -109,7 +109,7 @@ FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructP
 		FStructSaveCommand SaveCommand;
 		SaveCommand.Struct = Struct;
 		SaveCommand.StructPtr = StructPtr;
-		SaveCommand.Path = StructPathForIndex(KeyString);
+		SaveCommand.Path = StructPathForPrimaryKey(KeyString);
 		SaveCommand.bIsBlueprintStruct = bIsBlueprintStruct;
 		QueueSave(SaveCommand);
 		bSuccessfulQueue = true;
@@ -126,25 +126,37 @@ FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructP
 
 bool FBasicDatabaseNative::RemoveStructFromDatabase(const FString& PrimaryKey)
 {
-	int32 Key = FCString::Atoi(*PrimaryKey);
+	int32 Key = PrimaryKeyHandler->KeyFromString(PrimaryKey);
 
 	//remove struct index
 	PrimaryKeyHandler->RemoveEntry(Key);
 
-	//delete struct data
-	FString Path = StructPathForIndex(PrimaryKey);
+	//obtain correct path then delete struct data
+	FString Path = StructPathForPrimaryKey(PrimaryKey);
 	
-	return true;
+	//Todo: validate that path is part of our directory (i.e. no risk of deleting file outside of desired folder)
+
+	return FileSystem->DeleteFileAtPath(Path);
 }
 
-void FBasicDatabaseNative::UpdateStructAtPrimaryIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey)
+FString FBasicDatabaseNative::UpdateStructAtPrimaryIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey, bool bIsBlueprintStruct)
 {
+	int32 Key = PrimaryKeyHandler->KeyFromString(PrimaryKey);
 
+	if (PrimaryKey == TEXT("New") || !PrimaryKeyHandler->HasKey(Key))
+	{
+		return AddStructToDatabase(Struct, StructPtr, bIsBlueprintStruct);
+	}
+	else
+	{
+		SaveStructToPath(Struct, StructPtr, StructPathForPrimaryKey(PrimaryKey), bIsBlueprintStruct);
+		return PrimaryKey;
+	}
 }
 
-bool FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index)
+bool FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey, bool bIsBlueprintStruct)
 {
-	return LoadStructFromPath(Struct, StructPtr, Index);
+	return LoadStructFromPath(Struct, StructPtr, StructPathForPrimaryKey(PrimaryKey), bIsBlueprintStruct);
 }
 
 
@@ -205,7 +217,7 @@ FString FBasicDatabaseNative::PrimaryKeyPath()
 	return FPaths::Combine(RootPath(), PrimaryKeyFileName);
 }
 
-FString FBasicDatabaseNative::StructPathForIndex(const FString& Index)
+FString FBasicDatabaseNative::StructPathForPrimaryKey(const FString& Index)
 {
 	return FPaths::Combine(RootPath(), DataDirectory,  Index + TEXT(".json"));
 }
@@ -244,7 +256,12 @@ void FPrimaryKeyIndexHandler::RemoveEntry(int32 Key)
 	bIsDirty = true;
 }
 
-FString FPrimaryKeyIndexHandler::IndexForKey(int32 Key)
+bool FPrimaryKeyIndexHandler::HasKey(int32 Key)
+{
+	return PrimaryIndex.PrimaryKeyMap.Contains(Key);
+}
+
+FString FPrimaryKeyIndexHandler::StringFromKey(int32 Key)
 {
 	if (!PrimaryIndex.PrimaryKeyMap.Contains(Key)) 
 	{
@@ -254,6 +271,11 @@ FString FPrimaryKeyIndexHandler::IndexForKey(int32 Key)
 	{
 		return PrimaryIndex.PrimaryKeyMap[Key];
 	}
+}
+
+int32 FPrimaryKeyIndexHandler::KeyFromString(const FString& InKeyString)
+{
+	return FCString::Atoi(*InKeyString);
 }
 
 void FPrimaryKeyIndexHandler::GetKeys(TArray<int32>& OutKeys)

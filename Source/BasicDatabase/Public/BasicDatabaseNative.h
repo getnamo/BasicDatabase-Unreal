@@ -37,9 +37,11 @@ public:
 
 	FString AddNewEntry(int32 Key);
 	void RemoveEntry(int32 Key);
+	bool HasKey(int32 Key);
 
 	//While this is trivial for current setup, the wrapper is used for testing availability for index
-	FString IndexForKey(int32 Key);
+	FString StringFromKey(int32 Key);
+	int32 KeyFromString(const FString& InKeyString);
 
 	void GetKeys(TArray<int32>& OutKeys);
 
@@ -75,17 +77,15 @@ public:
 	//Main API
 	bool ReadIndicesToCache();
 
-	//Save/Load struct wrapper, BP fieldpaths require custom thunk wrapper
-	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
-	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
-
 	//Main Index
 
 	FString AddStructToDatabase(UStruct* Struct, void* StructPtr, bool bIsBlueprintStruct = false);
 	bool RemoveStructFromDatabase(const FString& PrimaryKey);
-	void UpdateStructAtPrimaryIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey);
 
-	bool ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index);
+	//If struct didn't exist, returns new PK
+	FString UpdateStructAtPrimaryIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey, bool bIsBlueprintStruct = false);
+
+	bool ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index, bool bIsBlueprintStruct = false);
 	
 
 	//Spatial index
@@ -114,6 +114,10 @@ public:
 	void FlushPendingCachedData();
 
 protected:
+	//Save/Load struct wrapper, BP fieldpaths require custom thunk wrapper
+	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
+	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
+
 	//The file domain that this db uses e.g. Default or Entity-Npc, converrted from reverse comlike
 	FString FileDomain;
 
@@ -135,7 +139,7 @@ protected:
 	//Path utility
 	FString PrimaryKeyPath();
 	FString RootPath();
-	FString StructPathForIndex(const FString& Index);
+	FString StructPathForPrimaryKey(const FString& Index);
 
 	//Utility
 	void RunRCTest(const FString& InRCDomain);
