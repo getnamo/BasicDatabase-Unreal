@@ -2,6 +2,51 @@
 
 class UCUFileSubsystem;
 
+#include "BasicDatabaseNative.generated.h"
+
+USTRUCT()
+struct FBDBPrimaryKeyIndex
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	TMap<int32, FString> PrimaryKeyMap;
+
+	//This property will decouple from index key length on add/remove
+	UPROPERTY()
+	int32 MaxPrimaryKey;
+
+	FBDBPrimaryKeyIndex()
+	{
+		MaxPrimaryKey = 0;
+	}
+};
+
+class FPrimaryKeyIndexHandler
+{
+public:
+	FPrimaryKeyIndexHandler(const FString& InPath, const FString& PrimaryKeyFileName = TEXT("PrimaryKeyIndex.json"));
+
+	void AddNewEntry(int32 Key, const FString& FileKey);
+	void RemoveEntry(int32 Key);
+
+	void GetKeys(TArray<int32>& OutKeys);
+
+	int32 NextPrimaryKey();
+
+	//Read into cache
+	bool ReadPrimaryKeyFile();
+	bool SavePrimaryKeyFile();
+
+	bool IsCached();
+
+protected:
+	FString PrimaryKeyFilePath;
+	FBDBPrimaryKeyIndex PrimaryIndex;
+	bool bIndexIsCached;
+	bool bIsDirty;
+};
+
 /**
 * Core class for loading databases, wrapped as a non-uobject base for more flexible integration (e.g. component).
 */
@@ -12,11 +57,9 @@ public:
 	FBasicDatabaseNative(const FString& InRCDomain = TEXT("default"));
 	~FBasicDatabaseNative();
 
-	//Root path for all databases
-	FString RootPath;
-
 
 	//Main API
+	bool ReadIndicesToCache();
 
 	//Save/Load struct wrapper, BP fieldpaths require custom thunk wrapper
 	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
@@ -26,7 +69,7 @@ public:
 	FString AddStructToDatabase(UStruct* Struct, void* StructPtr);
 	bool RemoveStructFromDatabase(const FString& Index);
 
-	void ReadStructAtIndex(UStruct* Struct, void* StructPtr);
+	bool ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index);
 	
 
 	//Spatial index
@@ -54,8 +97,22 @@ protected:
 	//The file domain that this db uses e.g. Default or Entity-Npc, converrted from reverse comlike
 	FString FileDomain;
 
+	//Root path for all databases
+	FString DirectoryPath;
+
+	//Primary key file
+	FString PrimaryKeyFileName;
+
 	//Will get initialized before constructor
 	UCUFileSubsystem* FileSystem;
+
+	TSharedPtr<FPrimaryKeyIndexHandler> PrimaryKeyHandler;
+
+
+	//Path utility
+	FString PrimaryKeyPath();
+	FString RootPath();
+	FString StructPathForIndex(const FString& Index);
 
 	//Utility
 	void RunRCTest(const FString& InRCDomain);

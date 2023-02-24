@@ -9,12 +9,32 @@ FBasicDatabaseNative::FBasicDatabaseNative(const FString& InRCDomain)
 {
 	FileSystem	= GEngine->GetEngineSubsystem<UCUFileSubsystem>();
 	FileDomain = FileDomainFromRC(InRCDomain);
-	RootPath = FileSystem->ProjectSavedDirectory();
+	DirectoryPath = FileSystem->ProjectSavedDirectory();
+
+	PrimaryKeyHandler = MakeShareable(new FPrimaryKeyIndexHandler(DirectoryPath));
 }
 
 FBasicDatabaseNative::~FBasicDatabaseNative()
 {
 	FileSystem = nullptr;
+}
+
+bool FBasicDatabaseNative::ReadIndicesToCache()
+{
+	bool bValidPK = PrimaryKeyHandler->ReadPrimaryKeyFile();
+	
+	//First time we're reading this!
+	if (!bValidPK)
+	{
+		//Flush an empty file
+		PrimaryKeyHandler->SavePrimaryKeyFile();
+
+		//re-read it
+		PrimaryKeyHandler->ReadPrimaryKeyFile();
+	}
+
+	//bIndexIsCached is set from reading the primary key file
+	return PrimaryKeyHandler->IsCached();
 }
 
 FString FBasicDatabaseNative::FileDomainFromRC(const FString& InRCDomain /*= TEXT("default")*/)
@@ -64,17 +84,32 @@ bool FBasicDatabaseNative::LoadStructFromPath(UStruct* Struct, void* StructPtr, 
 //BEGIN TODO: implement
 FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructPtr)
 {
+	//Request a new index
+	int32 NextPK= PrimaryKeyHandler->NextPrimaryKey();
+	if (NextPK == -1)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invalid key received, database indices have not been read/cached. Adding struct data failed."));
+		return TEXT("Invalid");
+	}
+
+	//Update index cache
+	//PrimaryKeyHandler->Add
+
+	//Store struct
 	return TEXT("Invalid");
 }
 
 bool FBasicDatabaseNative::RemoveStructFromDatabase(const FString& Index)
 {
+	//remove struct index
+
+	//delete struct data
 	return false;
 }
 
-void FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr)
+bool FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index)
 {
-
+	return LoadStructFromPath(Struct, StructPtr, Index);
 }
 
 bool FBasicDatabaseNative::AddSpatialIndex(const FString& Index, const FVector& Location)
@@ -108,6 +143,21 @@ void FBasicDatabaseNative::CapitalizeLetterAtIndex(FString& StringToModify, int3
 	StringToModify[Index] = FChar::ToUpper(StringToModify[Index]);
 }
 
+FString FBasicDatabaseNative::RootPath()
+{
+	return FPaths::Combine(DirectoryPath, FileDomain);
+}
+
+FString FBasicDatabaseNative::PrimaryKeyPath()
+{
+	return FPaths::Combine(RootPath(), PrimaryKeyFileName);
+}
+
+FString FBasicDatabaseNative::StructPathForIndex(const FString& Index)
+{
+	return FPaths::Combine(RootPath(), Index + TEXT(".json"));
+}
+
 //Testing suite
 void FBasicDatabaseNative::RunRCTest(const FString& InRCDomain)
 {
@@ -117,4 +167,56 @@ void FBasicDatabaseNative::RunRCTest(const FString& InRCDomain)
 	FileDomain = FileDomainFromRC(InRCDomain);
 
 	UE_LOG(LogTemp, Log, TEXT("file domain %s"), *FileDomain);
+}
+
+//PrimaryKeyIndex
+FPrimaryKeyIndexHandler::FPrimaryKeyIndexHandler(const FString& InPath, const FString& PrimaryKeyFileName)
+{
+	PrimaryKeyFilePath = FPaths::Combine(InPath, PrimaryKeyFileName);;
+	bIsDirty = false;
+	bIndexIsCached = false;
+}
+
+void FPrimaryKeyIndexHandler::AddNewEntry(int32 Key, const FString& FileKey)
+{
+	PrimaryIndex.PrimaryKeyMap.Add(Key, FileKey);
+	bIsDirty = true;
+}
+
+void FPrimaryKeyIndexHandler::RemoveEntry(int32 Key)
+{
+	PrimaryIndex.PrimaryKeyMap.Remove(Key);
+	bIsDirty = true;
+}
+
+void FPrimaryKeyIndexHandler::GetKeys(TArray<int32>& OutKeys)
+{
+	PrimaryIndex.PrimaryKeyMap.GetKeys(OutKeys);
+}
+
+int32 FPrimaryKeyIndexHandler::NextPrimaryKey()
+{
+	//We're 0 indexed, return 0 as first key
+	int32 NextKey = PrimaryIndex.MaxPrimaryKey;
+	PrimaryIndex.MaxPrimaryKey++;
+	bIsDirty = true;
+	return PrimaryIndex.MaxPrimaryKey;
+}
+
+bool FPrimaryKeyIndexHandler::ReadPrimaryKeyFile()
+{
+	bIndexIsCached = USIOJConvert::JsonFileToUStruct(PrimaryKeyFilePath, FBDBPrimaryKeyIndex::StaticStruct(), &PrimaryIndex);
+	return bIndexIsCached;
+}
+
+bool FPrimaryKeyIndexHandler::SavePrimaryKeyFile()
+{
+	bool bSaveSuccessful = USIOJConvert::ToJsonFile(PrimaryKeyFilePath, FBDBPrimaryKeyIndex::StaticStruct(), &PrimaryIndex);
+	bIsDirty = !bSaveSuccessful;
+	return bSaveSuccessful;
+}
+
+bool FPrimaryKeyIndexHandler::IsCached()
+{
+	return bIndexIsCached;
 }
