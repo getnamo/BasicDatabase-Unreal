@@ -9,8 +9,8 @@ struct FBDBPrimaryKeyIndex
 {
 	GENERATED_USTRUCT_BODY()
 
-	UPROPERTY()
-	TMap<int32, FString> PrimaryKeyMap;
+	UPROPERTY() 
+	TMap<int32, FString> PrimaryKeyMap;	
 
 	//This property will decouple from index key length on add/remove
 	UPROPERTY()
@@ -22,13 +22,24 @@ struct FBDBPrimaryKeyIndex
 	}
 };
 
+struct FStructSaveCommand 
+{
+	UStruct* Struct;
+	void* StructPtr;
+	FString Path;
+	bool bIsBlueprintStruct;
+};
+
 class FPrimaryKeyIndexHandler
 {
 public:
 	FPrimaryKeyIndexHandler(const FString& InPath, const FString& PrimaryKeyFileName = TEXT("PrimaryKeyIndex.json"));
 
-	void AddNewEntry(int32 Key, const FString& FileKey);
+	FString AddNewEntry(int32 Key);
 	void RemoveEntry(int32 Key);
+
+	//While this is trivial for current setup, the wrapper is used for testing availability for index
+	FString IndexForKey(int32 Key);
 
 	void GetKeys(TArray<int32>& OutKeys);
 
@@ -37,6 +48,9 @@ public:
 	//Read into cache
 	bool ReadPrimaryKeyFile();
 	bool SavePrimaryKeyFile();
+
+	//returns true if flushed (or already flushed)
+	bool SaveIfDirty();
 
 	bool IsCached();
 
@@ -66,8 +80,10 @@ public:
 	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
 
 	//Main Index
-	FString AddStructToDatabase(UStruct* Struct, void* StructPtr);
-	bool RemoveStructFromDatabase(const FString& Index);
+
+	FString AddStructToDatabase(UStruct* Struct, void* StructPtr, bool bIsBlueprintStruct = false);
+	bool RemoveStructFromDatabase(const FString& PrimaryKey);
+	void UpdateStructAtPrimaryIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey);
 
 	bool ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index);
 	
@@ -93,12 +109,17 @@ public:
 	FString FileDomainFromRC(const FString& InDomain);
 	void CapitalizeLetterAtIndex(FString& StringToModify, int32 Index);
 
+	//Queue up saves and flushes
+	void QueueSave(const FStructSaveCommand& SaveCommand);
+	void FlushPendingCachedData();
+
 protected:
 	//The file domain that this db uses e.g. Default or Entity-Npc, converrted from reverse comlike
 	FString FileDomain;
 
 	//Root path for all databases
 	FString DirectoryPath;
+	FString DataDirectory;
 
 	//Primary key file
 	FString PrimaryKeyFileName;
@@ -107,6 +128,8 @@ protected:
 	UCUFileSubsystem* FileSystem;
 
 	TSharedPtr<FPrimaryKeyIndexHandler> PrimaryKeyHandler;
+	TQueue<FStructSaveCommand> SaveQueue;
+	bool bInstantSave;
 
 
 	//Path utility

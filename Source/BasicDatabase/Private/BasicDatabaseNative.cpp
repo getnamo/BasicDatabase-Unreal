@@ -10,8 +10,11 @@ FBasicDatabaseNative::FBasicDatabaseNative(const FString& InRCDomain)
 	FileSystem	= GEngine->GetEngineSubsystem<UCUFileSubsystem>();
 	FileDomain = FileDomainFromRC(InRCDomain);
 	DirectoryPath = FileSystem->ProjectSavedDirectory();
+	DataDirectory = TEXT("Data");
 
 	PrimaryKeyHandler = MakeShareable(new FPrimaryKeyIndexHandler(DirectoryPath));
+
+	bInstantSave = true; //unoptimized path
 }
 
 FBasicDatabaseNative::~FBasicDatabaseNative()
@@ -81,8 +84,7 @@ bool FBasicDatabaseNative::LoadStructFromPath(UStruct* Struct, void* StructPtr, 
 	return USIOJConvert::JsonFileToUStruct(Path, Struct, StructPtr, bIsBlueprintStruct);
 }
 
-//BEGIN TODO: implement
-FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructPtr)
+FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructPtr, bool bIsBlueprintStruct)
 {
 	//Request a new index
 	int32 NextPK= PrimaryKeyHandler->NextPrimaryKey();
@@ -93,18 +95,51 @@ FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructP
 	}
 
 	//Update index cache
-	//PrimaryKeyHandler->Add
+	FString KeyString = PrimaryKeyHandler->AddNewEntry(NextPK);
+	bool bSuccessfulQueue = false;
+
+	//Simple path, will cause hitches
+	if (bInstantSave)
+	{
+		bSuccessfulQueue = SaveStructToPath(Struct, StructPtr, StructPathForIndex(KeyString), bIsBlueprintStruct);
+	}
+	else
+	{
+		//We use queuing and flush on separate threads if appropriate
+		FStructSaveCommand SaveCommand;
+		SaveCommand.Struct = Struct;
+		SaveCommand.StructPtr = StructPtr;
+		SaveCommand.Path = StructPathForIndex(KeyString);
+		SaveCommand.bIsBlueprintStruct = bIsBlueprintStruct;
+		QueueSave(SaveCommand);
+		bSuccessfulQueue = true;
+	}
 
 	//Store struct
-	return TEXT("Invalid");
+	if (!bSuccessfulQueue)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Struct save failed."));
+		return TEXT("Invalid");
+	}
+	return KeyString;
 }
 
-bool FBasicDatabaseNative::RemoveStructFromDatabase(const FString& Index)
+bool FBasicDatabaseNative::RemoveStructFromDatabase(const FString& PrimaryKey)
 {
+	int32 Key = FCString::Atoi(*PrimaryKey);
+
 	//remove struct index
+	PrimaryKeyHandler->RemoveEntry(Key);
 
 	//delete struct data
-	return false;
+	FString Path = StructPathForIndex(PrimaryKey);
+	
+	return true;
+}
+
+void FBasicDatabaseNative::UpdateStructAtPrimaryIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey)
+{
+
 }
 
 bool FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index)
@@ -112,6 +147,8 @@ bool FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr, c
 	return LoadStructFromPath(Struct, StructPtr, Index);
 }
 
+
+//TODO: Add spatial query
 bool FBasicDatabaseNative::AddSpatialIndex(const FString& Index, const FVector& Location)
 {
 	return false;
@@ -143,6 +180,21 @@ void FBasicDatabaseNative::CapitalizeLetterAtIndex(FString& StringToModify, int3
 	StringToModify[Index] = FChar::ToUpper(StringToModify[Index]);
 }
 
+void FBasicDatabaseNative::QueueSave(const FStructSaveCommand& SaveCommand)
+{
+	SaveQueue.Enqueue(SaveCommand);
+}
+
+void FBasicDatabaseNative::FlushPendingCachedData()
+{
+	while (!SaveQueue.IsEmpty())
+	{
+		FStructSaveCommand SaveCommand;
+		SaveQueue.Dequeue(SaveCommand);
+		SaveStructToPath(SaveCommand.Struct, SaveCommand.StructPtr, SaveCommand.Path, SaveCommand.bIsBlueprintStruct);
+	}
+}
+
 FString FBasicDatabaseNative::RootPath()
 {
 	return FPaths::Combine(DirectoryPath, FileDomain);
@@ -155,7 +207,7 @@ FString FBasicDatabaseNative::PrimaryKeyPath()
 
 FString FBasicDatabaseNative::StructPathForIndex(const FString& Index)
 {
-	return FPaths::Combine(RootPath(), Index + TEXT(".json"));
+	return FPaths::Combine(RootPath(), DataDirectory,  Index + TEXT(".json"));
 }
 
 //Testing suite
@@ -177,16 +229,31 @@ FPrimaryKeyIndexHandler::FPrimaryKeyIndexHandler(const FString& InPath, const FS
 	bIndexIsCached = false;
 }
 
-void FPrimaryKeyIndexHandler::AddNewEntry(int32 Key, const FString& FileKey)
+FString FPrimaryKeyIndexHandler::AddNewEntry(int32 Key)
 {
-	PrimaryIndex.PrimaryKeyMap.Add(Key, FileKey);
+	//NB: might be more appropriate to use a TSet, but for now using map for future flexibility of remapping indices
+	const FString KeyString = FString::Printf(TEXT("%d"), Key);
+	PrimaryIndex.PrimaryKeyMap.Add(Key, KeyString);
 	bIsDirty = true;
+	return KeyString;
 }
 
 void FPrimaryKeyIndexHandler::RemoveEntry(int32 Key)
 {
 	PrimaryIndex.PrimaryKeyMap.Remove(Key);
 	bIsDirty = true;
+}
+
+FString FPrimaryKeyIndexHandler::IndexForKey(int32 Key)
+{
+	if (!PrimaryIndex.PrimaryKeyMap.Contains(Key)) 
+	{
+		return TEXT("Invalid");
+	}
+	else
+	{
+		return PrimaryIndex.PrimaryKeyMap[Key];
+	}
 }
 
 void FPrimaryKeyIndexHandler::GetKeys(TArray<int32>& OutKeys)
@@ -214,6 +281,15 @@ bool FPrimaryKeyIndexHandler::SavePrimaryKeyFile()
 	bool bSaveSuccessful = USIOJConvert::ToJsonFile(PrimaryKeyFilePath, FBDBPrimaryKeyIndex::StaticStruct(), &PrimaryIndex);
 	bIsDirty = !bSaveSuccessful;
 	return bSaveSuccessful;
+}
+
+bool FPrimaryKeyIndexHandler::SaveIfDirty()
+{
+	if (bIsDirty)
+	{
+		return SavePrimaryKeyFile();
+	}
+	return true;
 }
 
 bool FPrimaryKeyIndexHandler::IsCached()
