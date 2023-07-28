@@ -73,6 +73,7 @@ public:
 	FBasicDatabaseNative(const FString& InRCDomain = TEXT("default"));
 	~FBasicDatabaseNative();
 
+	bool bOutputUpdatesToLog;
 
 	//Main API
 	bool ReadIndicesToCache();

@@ -11,6 +11,7 @@ FBasicDatabaseNative::FBasicDatabaseNative(const FString& InRCDomain)
 	FileDomain = FileDomainFromRC(InRCDomain);
 	DirectoryPath = FileSystem->ProjectSavedDirectory();
 	DataDirectory = TEXT("Data");
+	bOutputUpdatesToLog = true;
 
 	PrimaryKeyHandler = MakeShareable(new FPrimaryKeyIndexHandler(DirectoryPath));
 
@@ -75,6 +76,10 @@ FString FBasicDatabaseNative::FileDomainFromRC(const FString& InRCDomain /*= TEX
 bool FBasicDatabaseNative::SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct)
 {
 	//SIOJConvert already has a utility that does the base functionality we need, wrap it directly in our api
+	if (bOutputUpdatesToLog)
+	{
+		UE_LOG(LogTemp, Log, TEXT("Saved struct to %s"), *FPaths::ConvertRelativePathToFull(Path));
+	}
 	return USIOJConvert::ToJsonFile(Path, Struct, StructPtr, bIsBlueprintStruct);
 }
 

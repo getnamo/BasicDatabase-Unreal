@@ -25,10 +25,10 @@ public:
 		Stack.MostRecentProperty = nullptr;
 		FString Domain;
 		FString PrimaryKey;
-		FString* OutKey = nullptr;
+
 		UStruct* Struct;
 
-		Stack.StepCompiledIn<FStrProperty>(OutKey);
+		PARAM_PASSED_BY_REF(OutKey, FStrProperty, FString);	//magic for FString& OutKey = Stack.StepCompiledInRef<FStrProperty>(&OutKey);
 		Stack.StepCompiledIn<FStrProperty>(&Domain);
 		
 		//Determine wildcard property
@@ -45,7 +45,8 @@ public:
 		TSharedPtr<FBasicDatabaseNative> Database = Subsystem->DatabaseForDomain(Domain);
 		if (Database)
 		{
-			*OutKey = Database->UpdateStructAtPrimaryIndex(Struct, StructPtr, PrimaryKey, true);
+			//Update the struct and pass back the primary key (new PK if new)
+			OutKey = Database->UpdateStructAtPrimaryIndex(Struct, StructPtr, PrimaryKey, true);
 		}
 		P_NATIVE_END;
 	}
