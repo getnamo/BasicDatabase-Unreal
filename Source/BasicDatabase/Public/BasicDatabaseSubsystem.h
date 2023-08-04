@@ -51,6 +51,43 @@ public:
 		P_NATIVE_END;
 	}
 
+	//NB: This should be latent or have a 'Is Ready' promise type return wrapper.
+	UFUNCTION(BlueprintCallable, Category = BasicDatabaseFunctions, CustomThunk, meta = (CustomStructureParam = "OutStruct"))
+	void StructForPrimaryKey(bool& bOutDidRead, const FString& Domain, const FString& PrimaryKey, TFieldPath<FProperty> OutStruct);
+
+	//Custom thunk to get bp struct data in c++ accessible form
+	DECLARE_FUNCTION(execStructForPrimaryKey)
+	{
+		Stack.MostRecentProperty = nullptr;
+		FString InDomain;
+		FString InPrimaryKey;
+
+		UStruct* Struct;
+
+		PARAM_PASSED_BY_REF(bDidReadSuccessfully, FBoolProperty, bool);
+		Stack.StepCompiledIn<FStrProperty>(&InDomain);
+		Stack.StepCompiledIn<FStrProperty>(&InPrimaryKey);
+
+		//Determine wildcard property
+		Stack.Step(Stack.Object, NULL);
+		FStructProperty* StructProperty = CastField<FStructProperty>(Stack.MostRecentProperty);
+		void* StructPtr = Stack.MostRecentPropertyAddress;
+		Struct = StructProperty->Struct;
+
+		P_FINISH;
+		P_NATIVE_BEGIN;
+		UBasicDataBaseSubsystem* Subsystem = GEngine->GetEngineSubsystem<UBasicDataBaseSubsystem>();
+		TSharedPtr<FBasicDatabaseNative> Database = Subsystem->DatabaseForDomain(InDomain);
+		
+		if (Database)
+		{
+			//Run the lookup function
+			bDidReadSuccessfully = Database->ReadStructAtIndex(Struct, StructPtr, InPrimaryKey, true);
+		}
+		P_NATIVE_END;
+	}
+
+
 	virtual	void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize() override;
 

@@ -22,6 +22,28 @@ struct FBDBPrimaryKeyIndex
 	}
 };
 
+/*
+USTRUCT()
+struct FWaitableStructResult
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY()
+	UStruct* Struct;
+
+	FThreadSafeBool bReadComplete;
+	void* StructPtr;
+
+	//Todo: add a function that converts the result to TFieldAnyStruct
+
+	FWaitableStructResult()
+	{
+		bReadComplete = false;
+		StructPtr = nullptr;
+	}
+};
+*/
+
 struct FStructSaveCommand 
 {
 	UStruct* Struct;
