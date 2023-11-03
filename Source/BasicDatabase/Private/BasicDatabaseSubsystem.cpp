@@ -36,7 +36,7 @@ void UBasicDataBaseSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 	//We depend on file system being available for our derivative functions
 	Collection.InitializeDependency(UCUFileSubsystem::StaticClass());
 
-	UE_LOG(LogTemp, Log, TEXT("UBasicDataBaseSubsystem initiliazed."));
+	UE_LOG(LogTemp, Log, TEXT("UBasicDataBaseSubsystem initialized."));
 }
 
 void UBasicDataBaseSubsystem::Deinitialize()
