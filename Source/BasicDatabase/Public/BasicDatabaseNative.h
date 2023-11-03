@@ -103,12 +103,17 @@ public:
 	//Main Index
 
 	FString AddStructToDatabase(UStruct* Struct, void* StructPtr, bool bIsBlueprintStruct = false);
-	bool RemoveStructFromDatabase(const FString& PrimaryKey);
+	FString AddJsonStringToDatabase(const FString& JsonString);
+	bool RemoveEntryFromDatabase(const FString& PrimaryKey);
+
+	
 
 	//If struct didn't exist, returns new PK
 	FString UpdateStructAtPrimaryIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey, bool bIsBlueprintStruct = false);
+	FString UpdateJsonStringAtPrimaryIndex(const FString& JsonString, const FString& Index);
 
 	bool ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& Index, bool bIsBlueprintStruct = false);
+	bool ReadJsonStringAtIndex(const FString& Index, FString& OutJsonString);
 	
 
 	//Spatial index
@@ -139,7 +144,9 @@ public:
 protected:
 	//Save/Load struct wrapper, BP fieldpaths require custom thunk wrapper
 	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
+	bool SaveStringToPath(const FString& JsonString, const FString& Path);
 	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
+	bool LoadStringFromPath(const FString& Path, FString& OutJsonString);
 
 	//The file domain that this db uses e.g. Default or Entity-Npc, converrted from reverse comlike
 	FString FileDomain;
@@ -162,7 +169,7 @@ protected:
 	//Path utility
 	FString PrimaryKeyPath();
 	FString RootPath();
-	FString StructPathForPrimaryKey(const FString& Index);
+	FString EntryPathForPrimaryKey(const FString& Index);
 
 	//Utility
 	void RunRCTest(const FString& InRCDomain);

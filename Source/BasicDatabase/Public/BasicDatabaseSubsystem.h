@@ -15,6 +15,12 @@ public:
 	UFUNCTION(BlueprintCallable, Category=BasicDatabaseFunctions)
 	void ConnectDatabase(const FString& Domain);
 
+	UFUNCTION(BlueprintCallable, Category = BasicDatabaseFunctions)
+	void AddJsonStringToDatabase(FString& OutPrimaryKey, const FString& InDomain, const FString& JsonString, const FString& AtPrimaryKey = TEXT("New"));
+
+	UFUNCTION(BlueprintCallable, Category = BasicDatabaseFunctions)
+	void JsonStringForPrimaryKey(bool& bOutDidRead, const FString& Domain, const FString& PrimaryKey, FString& OutJsonString);
+
 	//Add or update struct at primary key, if key is 'new' it will create a new key instead and return that
 	UFUNCTION(BlueprintCallable, Category = BasicDatabaseFunctions, CustomThunk, meta = (CustomStructureParam = "AnyStruct"))
 	void AddStructToDatabase(FString& OutPrimaryKey, const FString& InDomain, TFieldPath<FProperty> AnyStruct, const FString& AtPrimaryKey = TEXT("New"));

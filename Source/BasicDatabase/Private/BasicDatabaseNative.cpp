@@ -83,10 +83,36 @@ bool FBasicDatabaseNative::SaveStructToPath(UStruct* Struct, void* StructPtr, co
 	return USIOJConvert::ToJsonFile(Path, Struct, StructPtr, bIsBlueprintStruct);
 }
 
+bool FBasicDatabaseNative::SaveStringToPath(const FString& JsonString, const FString& Path)
+{
+	FTCHARToUTF8 Utf8String(*JsonString);
+
+	TArray<uint8> Bytes;
+	Bytes.Append((uint8*)Utf8String.Get(), Utf8String.Length());
+
+	//flush to disk
+	return FFileHelper::SaveArrayToFile(Bytes, *Path);
+}
+
 bool FBasicDatabaseNative::LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct)
 {
 	//SIOJConvert already has a utility that does the base functionality we need, wrap it directly in our api
 	return USIOJConvert::JsonFileToUStruct(Path, Struct, StructPtr, bIsBlueprintStruct);
+}
+
+bool FBasicDatabaseNative::LoadStringFromPath(const FString& Path, FString& OutJsonString)
+{
+	//Read bytes from file
+	TArray<uint8> OutBytes;
+	if (!FFileHelper::LoadFileToArray(OutBytes, *Path))
+	{
+		return false;
+	}
+
+	//Convert to json string
+	FFileHelper::BufferToString(OutJsonString, OutBytes.GetData(), OutBytes.Num());
+
+	return true;
 }
 
 FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructPtr, bool bIsBlueprintStruct)
@@ -106,7 +132,7 @@ FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructP
 	//Simple path, will cause hitches
 	if (bInstantSave)
 	{
-		bSuccessfulQueue = SaveStructToPath(Struct, StructPtr, StructPathForPrimaryKey(KeyString), bIsBlueprintStruct);
+		bSuccessfulQueue = SaveStructToPath(Struct, StructPtr, EntryPathForPrimaryKey(KeyString), bIsBlueprintStruct);
 	}
 	else
 	{
@@ -114,7 +140,7 @@ FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructP
 		FStructSaveCommand SaveCommand;
 		SaveCommand.Struct = Struct;
 		SaveCommand.StructPtr = StructPtr;
-		SaveCommand.Path = StructPathForPrimaryKey(KeyString);
+		SaveCommand.Path = EntryPathForPrimaryKey(KeyString);
 		SaveCommand.bIsBlueprintStruct = bIsBlueprintStruct;
 		QueueSave(SaveCommand);
 		bSuccessfulQueue = true;
@@ -129,7 +155,37 @@ FString FBasicDatabaseNative::AddStructToDatabase(UStruct* Struct, void* StructP
 	return KeyString;
 }
 
-bool FBasicDatabaseNative::RemoveStructFromDatabase(const FString& PrimaryKey)
+FString FBasicDatabaseNative::AddJsonStringToDatabase(const FString& JsonString)
+{
+	//Request a new index
+	int32 NextPK = PrimaryKeyHandler->NextPrimaryKey();
+	if (NextPK == -1)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Invalid key received, database indices have not been read/cached. Adding struct data failed."));
+		return TEXT("Invalid");
+	}
+
+	FString KeyString = PrimaryKeyHandler->AddNewEntry(NextPK);
+	return KeyString;
+
+	bool bSuccessfulQueue = false;
+
+	//Simple path, will cause hitches
+	if (bInstantSave)
+	{
+		bSuccessfulQueue = SaveStringToPath(JsonString, EntryPathForPrimaryKey(KeyString));
+	}
+
+	//Store struct
+	if (!bSuccessfulQueue)
+	{
+		UE_LOG(LogTemp, Error, TEXT("Struct save failed."));
+		return TEXT("Invalid");
+	}
+	return KeyString;
+}
+
+bool FBasicDatabaseNative::RemoveEntryFromDatabase(const FString& PrimaryKey)
 {
 	int32 Key = PrimaryKeyHandler->KeyFromString(PrimaryKey);
 
@@ -137,7 +193,7 @@ bool FBasicDatabaseNative::RemoveStructFromDatabase(const FString& PrimaryKey)
 	PrimaryKeyHandler->RemoveEntry(Key);
 
 	//obtain correct path then delete struct data
-	FString Path = StructPathForPrimaryKey(PrimaryKey);
+	FString Path = EntryPathForPrimaryKey(PrimaryKey);
 	
 	//Todo: validate that path is part of our directory (i.e. no risk of deleting file outside of desired folder)
 
@@ -154,14 +210,34 @@ FString FBasicDatabaseNative::UpdateStructAtPrimaryIndex(UStruct* Struct, void* 
 	}
 	else
 	{
-		SaveStructToPath(Struct, StructPtr, StructPathForPrimaryKey(PrimaryKey), bIsBlueprintStruct);
+		SaveStructToPath(Struct, StructPtr, EntryPathForPrimaryKey(PrimaryKey), bIsBlueprintStruct);
+		return PrimaryKey;
+	}
+}
+
+FString FBasicDatabaseNative::UpdateJsonStringAtPrimaryIndex(const FString& JsonString, const FString& PrimaryKey)
+{
+	int32 Key = PrimaryKeyHandler->KeyFromString(PrimaryKey);
+
+	if (PrimaryKey == TEXT("New") || !PrimaryKeyHandler->HasKey(Key))
+	{
+		return AddJsonStringToDatabase(JsonString);
+	}
+	else
+	{
+		SaveStringToPath(JsonString, EntryPathForPrimaryKey(PrimaryKey));
 		return PrimaryKey;
 	}
 }
 
 bool FBasicDatabaseNative::ReadStructAtIndex(UStruct* Struct, void* StructPtr, const FString& PrimaryKey, bool bIsBlueprintStruct)
 {
-	return LoadStructFromPath(Struct, StructPtr, StructPathForPrimaryKey(PrimaryKey), bIsBlueprintStruct);
+	return LoadStructFromPath(Struct, StructPtr, EntryPathForPrimaryKey(PrimaryKey), bIsBlueprintStruct);
+}
+
+bool FBasicDatabaseNative::ReadJsonStringAtIndex(const FString& Index, FString& OutJsonString)
+{
+	return LoadStringFromPath(EntryPathForPrimaryKey(Index), OutJsonString);
 }
 
 
@@ -222,7 +298,7 @@ FString FBasicDatabaseNative::PrimaryKeyPath()
 	return FPaths::Combine(RootPath(), PrimaryKeyFileName);
 }
 
-FString FBasicDatabaseNative::StructPathForPrimaryKey(const FString& Index)
+FString FBasicDatabaseNative::EntryPathForPrimaryKey(const FString& Index)
 {
 	return FPaths::Combine(RootPath(), DataDirectory,  Index + TEXT(".json"));
 }
