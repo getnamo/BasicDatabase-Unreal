@@ -88,7 +88,7 @@ protected:
 /**
 * Core class for loading databases, wrapped as a non-uobject base for more flexible integration (e.g. component).
 */
-class FBasicDatabaseNative
+class BASICDATABASE_API FBasicDatabaseNative
 {
 public:
 	//RC domain is reverse comlike e.g. entity.npc
@@ -141,12 +141,14 @@ public:
 	void QueueSave(const FStructSaveCommand& SaveCommand);
 	void FlushPendingCachedData();
 
+	static bool SaveStringToPath(const FString& JsonString, const FString& Path);
+	static bool LoadStringFromPath(const FString& Path, FString& OutJsonString);
+	static bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
+	static bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
+
 protected:
 	//Save/Load struct wrapper, BP fieldpaths require custom thunk wrapper
-	bool SaveStructToPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
-	bool SaveStringToPath(const FString& JsonString, const FString& Path);
-	bool LoadStructFromPath(UStruct* Struct, void* StructPtr, const FString& Path, bool bIsBlueprintStruct = false);
-	bool LoadStringFromPath(const FString& Path, FString& OutJsonString);
+
 
 	//The file domain that this db uses e.g. Default or Entity-Npc, converrted from reverse comlike
 	FString FileDomain;
