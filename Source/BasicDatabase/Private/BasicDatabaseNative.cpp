@@ -166,9 +166,11 @@ FString FBasicDatabaseNative::AddJsonStringToDatabase(const FString& JsonString)
 	}
 
 	FString KeyString = PrimaryKeyHandler->AddNewEntry(NextPK);
+	
+	//NB: debug bypass for now
 	return KeyString;
 
-	bool bSuccessfulQueue = false;
+	/*bool bSuccessfulQueue = false;
 
 	//Simple path, will cause hitches
 	if (bInstantSave)
@@ -182,7 +184,7 @@ FString FBasicDatabaseNative::AddJsonStringToDatabase(const FString& JsonString)
 		UE_LOG(LogTemp, Error, TEXT("Struct save failed."));
 		return TEXT("Invalid");
 	}
-	return KeyString;
+	return KeyString;*/
 }
 
 bool FBasicDatabaseNative::RemoveEntryFromDatabase(const FString& PrimaryKey)
